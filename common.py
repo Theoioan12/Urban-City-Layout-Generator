@@ -607,6 +607,17 @@ class ACO_UrbanGardening:
         H_street = sum(1 for t in neighbor_tiles if t in ['R', 'C'])  # Connection to residential and commercial
         H_green = sum(1 for t in neighbor_tiles if t == 'R')  # Near residential areas
 
+        # Additional Constraints:
+        # Ensure at least one street adjacent to residential areas
+        if 'R' in neighbor_tiles:
+            if 'S' not in neighbor_tiles:
+                H_street = 0.5  # Penalize if no street adjacent to residential area
+
+        # Ensure there's at least one green space at a maximum distance of 3 tiles from each residential tile
+        if 'R' in neighbor_tiles:
+            if not any(t == 'G' for t in neighbor_tiles if t != 'R'):
+                H_green = 0.5  # Penalize if no nearby green space
+
         # Normalize
         max_value = max(H_residential, H_commercial, H_street, H_green, 1)  # Avoid division by zero
         return np.array([H_residential, H_commercial, H_street, H_green]) / max_value
