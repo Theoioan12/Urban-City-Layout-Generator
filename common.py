@@ -442,7 +442,7 @@ class UrbanGardeningProblem:
 
 # The class for testing
 class ACO_UrbanGardening:
-    def __init__(self, grid_size, num_ants, num_iterations, problem, evaporation_rate, alpha, beta):
+    def __init__(self, grid_size, num_ants, num_iterations, problem, evaporation_rate, alpha, beta, elevations_string):
         self.grid_size = grid_size # Grid dimension
         self.num_ants = num_ants # The number of ants
         self.num_iterations = num_iterations # Total iterations
@@ -452,6 +452,7 @@ class ACO_UrbanGardening:
         self.alpha = alpha  # Pheromone influence
         self.beta = beta    # Heuristic influence
         self.tile_types = ['R', 'C', 'S', 'G']  # Residential, Commercial, Streets, Green spaces
+        self.elevations_string = elevations_string
 
         # History tracking
         self.history = []
@@ -571,12 +572,8 @@ class ACO_UrbanGardening:
     used by the algorithm
     """
     def calculate_heuristic(self, position, solution):
-        # Placeholder for grid_matrix if solution is not yet built
         if not solution:
             return np.array([1, 1, 1, 1])  # Return neutral heuristic values
-
-        width = len(solution[0])
-        height = len(solution)
 
         grid_matrix = [solution[i:i + width] for i in range(0, len(solution), width)]
         i, j = divmod(position, width)
@@ -600,27 +597,43 @@ class ACO_UrbanGardening:
             else:
                 neighbor_tiles.append(None)  # Placeholder for out-of-bounds indices
 
-        # Heuristic calculation
-        H_residential = sum(1 for t in neighbor_tiles if t in ['G', 'S'])  # Prefer next to greens and streets
-        H_commercial = sum(1 for t in neighbor_tiles if t == 'S') + 0.5 * (
-                width / 2 - abs((width / 2) - j))  # Central and near streets
-        H_street = sum(1 for t in neighbor_tiles if t in ['R', 'C'])  # Connection to residential and commercial
-        H_green = sum(1 for t in neighbor_tiles if t == 'R')  # Near residential areas
+        # Heuristic calculation for tile proportions
+        H_residential = sum(1 for t in neighbor_tiles if t == 'R')  # Residential tiles
+        H_commercial = sum(1 for t in neighbor_tiles if t == 'C')  # Commercial tiles
+        H_green = sum(1 for t in neighbor_tiles if t == 'G')  # Green tiles
+        H_street = sum(1 for t in neighbor_tiles if t == 'S')  # Street tiles
 
-        # Additional Constraints:
-        # Ensure at least one street adjacent to residential areas
-        if 'R' in neighbor_tiles:
-            if 'S' not in neighbor_tiles:
-                H_street = 0.5  # Penalize if no street adjacent to residential area
+        # Additional heuristics
+        H_street_adj = 1 if 'S' in neighbor_tiles else 0  # Adjacent street tiles
+        H_res_clusters = 1 if 2 <= H_residential <= 10 else 0.5  # Residential clusters size
+        H_nearby_green = 1 if any(t == 'G' for t in neighbor_tiles) else 0
+        H_street_connectivity = 1 if 'S' in neighbor_tiles else 0
 
-        # Ensure there's at least one green space at a maximum distance of 3 tiles from each residential tile
-        if 'R' in neighbor_tiles:
-            if not any(t == 'G' for t in neighbor_tiles if t != 'R'):
-                H_green = 0.5  # Penalize if no nearby green space
+        highest_point = max(self.elevations_string)
+        lowest_point = min(self.elevations_string)
+        elevation_threshold_R = (highest_point - lowest_point) / 3
+        elevation_threshold_C = (highest_point - lowest_point) / 5
+        elevation_threshold_G = (highest_point - lowest_point) / 3
+
+        elevation = self.elevations_string[position]
+
+        H_elev_weight_R = 1 if elevation <= elevation_threshold_R else 0
+        H_elev_weight_C = 1 if elevation <= elevation_threshold_C else 0
+        H_elev_weight_G = 1 if elevation >= elevation_threshold_G else 0
+
+        # Aggregate heuristics to match tile types
+        H_R = (H_residential + H_res_clusters + H_nearby_green + H_street_adj + H_elev_weight_R) / 5
+        H_C = (H_commercial + H_elev_weight_C) / 2
+        H_S = (H_street + H_street_connectivity) / 2
+        H_G = (H_green + H_elev_weight_G) / 2
 
         # Normalize
-        max_value = max(H_residential, H_commercial, H_street, H_green, 1)  # Avoid division by zero
-        return np.array([H_residential, H_commercial, H_street, H_green]) / max_value
+        heuristics = np.array([H_R, H_C, H_S, H_G])
+        max_value = np.max(heuristics)
+        if max_value > 0:
+            heuristics /= max_value  # Avoid division by zero
+
+        return heuristics
 
     def update_global_pheromones(self, solutions, fitnesses):
         # Evaporate pheromones
@@ -632,8 +645,6 @@ class ACO_UrbanGardening:
                 tile_index = self.tile_types.index(tile)
                 self.pheromones[idx, tile_index] += fitness
 
-
-
 # Example usage
 grid_size = 100
 num_ants = 10
@@ -641,7 +652,7 @@ num_iterations = 15
 elevations = [random.randint(0, 1000) for _ in range(grid_size)]
 problem = UrbanGardeningProblem(elevations)
 
-aco = ACO_UrbanGardening(grid_size, num_ants, num_iterations, problem, 0.1, 1, 1)
+aco = ACO_UrbanGardening(grid_size, num_ants, num_iterations, problem, 0.1, 1, 1, elevations)
 best_solution, best_fitness, commercial_weight_history, green_weight_history, res_weight_history, street_adjacency_history, street_connectivity_history, elev_weight_overall_history = aco.run()
 
 print("Best Fitness:", best_fitness)
