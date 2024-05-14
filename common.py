@@ -556,14 +556,56 @@ class ACO_UrbanGardening:
 
     # Next tile choice
     def choose_next_tile(self, position, current_solution):
-        pheromones = self.pheromones[position]
         heuristic_values = self.calculate_heuristic(position, current_solution)
 
-        # Calculate probabilities using both pheromone and heuristic information
-        probabilities = (pheromones * self.alpha) * (heuristic_values * self.beta)
-        probabilities /= probabilities.sum()
+        # Ensure pheromones array has the same shape as heuristic values
+        pheromones = self.pheromones[position]
+        if len(pheromones) != len(heuristic_values):
+            raise ValueError("Pheromone and heuristic arrays must have the same length")
 
-        return random.choices(self.tile_types, weights=probabilities, k=1)[0]
+        # Calculate the current counts of each tile type in the solution
+        count_R = current_solution.count('R')
+        count_C = current_solution.count('C')
+        count_G = current_solution.count('G')
+        count_S = current_solution.count('S')
+
+        # Desired proportions
+        desired_R_min = self.grid_size * 0.20
+        desired_R_max = self.grid_size * 0.30
+        desired_C_min = self.grid_size * 0.10
+        desired_C_max = self.grid_size * 0.20
+        desired_G_min = self.grid_size * 0.15
+        desired_G_max = self.grid_size * 0.25
+        desired_S_min = self.grid_size * 0.20
+        desired_S_max = self.grid_size * 0.30
+
+        # Adjust heuristic values based on current proportions
+        def adjust_heuristic(count, desired_min, desired_max, heuristic, tile_type):
+            if count < desired_min:
+                return heuristic * (1 + (desired_min - count) / self.grid_size)
+            elif count > desired_max:
+                return 0 if tile_type else heuristic * (1 - (count - desired_max) / self.grid_size)
+            return heuristic
+
+        # Adjust heuristic values based on current proportions
+        heuristic_values[0] = adjust_heuristic(count_R, desired_R_min, desired_R_max, heuristic_values[0], 'R')
+        heuristic_values[1] = adjust_heuristic(count_C, desired_C_min, desired_C_max, heuristic_values[1], 'C')
+        heuristic_values[2] = adjust_heuristic(count_S, desired_S_min, desired_S_max, heuristic_values[2], 'S')
+        heuristic_values[3] = adjust_heuristic(count_G, desired_G_min, desired_G_max, heuristic_values[3], 'G')
+
+        # Calculate scores using both pheromone and heuristic information
+        scores = (np.array(pheromones) ** self.alpha) * (np.array(heuristic_values) ** self.beta)
+
+        # Normalize scores to get probabilities
+        if scores.sum() > 0:
+            probabilities = scores / scores.sum()
+        else:
+            probabilities = np.ones_like(scores) / len(scores)
+
+
+        # Select next tile based on the highest score
+        next_tile = np.random.choice(self.tile_types, p=probabilities)
+        return next_tile
 
     """
     !IMPORTANT!
