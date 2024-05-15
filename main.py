@@ -1,3 +1,8 @@
+"""
+ Buliga Theodor Ioan
+ Preslav Shterev
+ UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
+"""
 import numpy as np
 import random
 import matplotlib.pyplot as plt

@@ -1,11 +1,16 @@
-# Imports for all of the code
+"""
+ Imported code but modified by Buliga Theodor Ioan
+ UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
+"""
+# Imports for all the code
 from inspyred import ec, benchmarks
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+
 """
-Modified the code from the generational
-since I opted for an automatic testing.
+ Modified the code from the generational
+ since I opted for an automatic testing.
 """
 def generate_elevation_matrix(size, max_altitude):
     elevation_matrix = np.zeros((size, size))
@@ -24,8 +29,8 @@ def generate_elevation_matrix(size, max_altitude):
 
 # city layout to be used for generation
 """
-To this class I added width and height 
-separately not as global variables.
+ To this class I added width and height as atributes 
+ separately not as global variables.
 """
 class CityLayout(benchmarks.Benchmark):
   # init method

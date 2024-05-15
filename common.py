@@ -1,12 +1,16 @@
+"""
+ Buliga Theodor Ioan
+ UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
+"""
 # Imports for all of the code
 from inspyred import ec, benchmarks
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from GA import CityLayout
+from fitness import CityLayout
 
 """
-    the ACO implementation.
+ ACO implementation
 """
 # Subclass to be used by the ACO class
 class UrbanGardeningProblem:
@@ -191,10 +195,10 @@ class ACO_UrbanGardening:
         return next_tile
 
     """
-    !IMPORTANT!
+     !IMPORTANT!
     
-    The heuristic function 
-    used by the algorithm
+     The heuristic function 
+     used by the algorithm
     """
     def calculate_heuristic(self, position, solution):
         if not solution:
