@@ -3,13 +3,16 @@ import random
 import matplotlib.pyplot as plt
 from common import CityLayout, ACO_UrbanGardening, UrbanGardeningProblem  # Assuming CityLayout is in common.py
 
-
-def run_experiment(grid_size, num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists, width, height):
+def run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists):
     results = []
 
     for alpha in alphas:
         for beta in betas:
             for elevation_list in elevation_lists:
+                grid_size = len(elevation_list)
+                width = int(np.sqrt(grid_size))
+                height = grid_size // width
+
                 problem = UrbanGardeningProblem(elevation_list, width, height)  # Initialize UrbanGardeningProblem with elevations
                 aco = ACO_UrbanGardening(grid_size, num_ants, num_iterations, problem, evaporation_rate, alpha, beta, elevation_list, width, height)
                 best_solution, best_fitness, _, _, _, _, _, _ = aco.run()
@@ -23,7 +26,6 @@ def run_experiment(grid_size, num_ants, num_iterations, evaporation_rate, alphas
                 print(f"Completed: alpha={alpha}, beta={beta}, best_fitness={best_fitness}")
 
     return results
-
 
 def plot_results(results):
     alphas = sorted(set(result['alpha'] for result in results))
@@ -44,11 +46,7 @@ def plot_results(results):
     plt.tight_layout()
     plt.show()
 
-
 if __name__ == "__main__":
-    grid_size = 100
-    width = 10
-    height = 10
     num_ants = 10
     num_iterations = 15
     evaporation_rate = 0.1
@@ -101,5 +99,5 @@ if __name__ == "__main__":
          600, 650, 700, 750, 800, 750, 700, 650, 550, 600, 650, 700, 750, 700, 650, 600]
     ]
 
-    results = run_experiment(grid_size, num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists, width, height)
+    results = run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists)
     plot_results(results)

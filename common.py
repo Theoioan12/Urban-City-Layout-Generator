@@ -3,19 +3,7 @@ import math
 from random import Random
 from time import time
 from inspyred import ec, benchmarks
-from matplotlib import pyplot as plt
-
-# Static variables
-
-
 import random
-# Generate 16 random values between 0 and 1000
-#elevations_string = [random.randint(0, 1000) for _ in range(gridsize)]
-#elevations_string = [948,924,1000,903,936,  935,  990,  939,   68   43   40   96   71  968
-  #938   43   25   97   16   88  990  901   99   14   67   22    9  909
-  #940   84    0   81   82   76  985  946   95   80    1   46   80  993
-  #956  915  981  932  996  993  982]
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -33,18 +21,6 @@ def generate_elevation_matrix(size, max_altitude):
             elevation_matrix[i, j] = center_altitude + (edge_altitude - center_altitude) * (distance_to_center / (size / 2))
 
     return elevation_matrix
-
-# Example usage
-"""
-size = width  # Size of the elevation matrix (square)
-max_altitude = 1500  # Maximum altitude in meters
-elevation_matrix = generate_elevation_matrix(size, max_altitude)
-"""
-"""elevations_string = elevation_matrix.flatten()
-print(elevations_string)
-"""
-#elevations_string = [850, 845, 830, 800, 750, 850, 845, 830, 800, 750, 850, 845, 830, 800, 750, 850, 845, 830, 800, 750, 850, 845, 830, 800, 750]
-
 
 # city layout to be used for generation
 class CityLayout(benchmarks.Benchmark):
@@ -546,17 +522,3 @@ aco.visualize_fitness_history()
 # Optional: Visualize the best solution
 # aco.visualize_solution(best_solution)
 
-"""
-plt.figure()
-plt.plot(commercial_weight_history, label='commercial weight')
-plt.plot(green_weight_history, label='green weight')
-plt.plot(res_weight_history, label='res weight')
-plt.plot(street_adjacency_history, label='street adjacency')
-#plt.plot(nearby_green_history, label='nearby green')
-plt.plot(street_connectivity_history, label='street connectivity')
-plt.plot(elev_weight_overall_history, label='elevations overall')
-#plt.plot(solution_history, label='fitness')
-plt.xlabel('Generation')
-plt.ylabel('')
-plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=2)
-"""
