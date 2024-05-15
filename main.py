@@ -1,7 +1,7 @@
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from common import CityLayout, ACO_UrbanGardening, UrbanGardeningProblem  # Assuming CityLayout is in common.py
+from common import ACO_UrbanGardening, UrbanGardeningProblem  # Assuming CityLayout is in common.py
 
 def run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists):
     results = []
