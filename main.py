@@ -67,8 +67,8 @@ if __name__ == "__main__":
     num_ants = 10
     num_iterations = 15
     evaporation_rate = 0.1
-    alphas = [0.5, 1, 1.5]
-    betas = [0.5, 1, 1.5]
+    alphas = [0]
+    betas = [1]
 
     # Read elevation lists from the input.json file
     with open('input.json', 'r') as f:
