@@ -1,12 +1,13 @@
 # Imports for all of the code
-import math
-from random import Random
-from time import time
 from inspyred import ec, benchmarks
 import random
 import numpy as np
 import matplotlib.pyplot as plt
 
+"""
+Modified the code from the generational
+since I opted for an automatic testing.
+"""
 def generate_elevation_matrix(size, max_altitude):
     elevation_matrix = np.zeros((size, size))
 
@@ -23,6 +24,10 @@ def generate_elevation_matrix(size, max_altitude):
     return elevation_matrix
 
 # city layout to be used for generation
+"""
+To this class I added width and height 
+separately not as global variables.
+"""
 class CityLayout(benchmarks.Benchmark):
   # init method
   def __init__(self, elevations_string, width, height):
@@ -47,6 +52,7 @@ class CityLayout(benchmarks.Benchmark):
           fitness.append(self.calculate_fitness(candidate, self.elevations_string))
       return fitness
 
+# The actual fitness function
   def calculate_fitness(self, layout, elev_grid):
       fitness = 0
       fitness += 10 * self.elev_weight_normal(layout, elev_grid)
@@ -241,7 +247,9 @@ def distance(x, y):
 
   return count
 
-# city layout using Ant Colony Optimization
+"""
+    the ACO implementation.
+"""
 
 # Subclass to be used by the ACO class
 class UrbanGardeningProblem:
@@ -268,8 +276,8 @@ class ACO_UrbanGardening:
         self.beta = beta    # Heuristic influence
         self.tile_types = ['R', 'C', 'S', 'G']  # Residential, Commercial, Streets, Green spaces
         self.elevations_string = elevations_string
-        self.width = width
-        self.height = height
+        self.width = width # Width
+        self.height = height # Height
 
         # History tracking
         self.history = []
@@ -504,7 +512,7 @@ class ACO_UrbanGardening:
             for idx, tile in enumerate(solution):
                 tile_index = self.tile_types.index(tile)
                 self.pheromones[idx, tile_index] += fitness
-
+"""
 # Example usage
 grid_size = 100
 height = 10
@@ -521,4 +529,4 @@ print("Best Fitness:", best_fitness)
 aco.visualize_fitness_history()
 # Optional: Visualize the best solution
 # aco.visualize_solution(best_solution)
-
+"""
