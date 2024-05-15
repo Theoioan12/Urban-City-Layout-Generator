@@ -11,15 +11,22 @@ import matplotlib.pyplot as plt
 from aco import ACO_UrbanGardening, UrbanGardeningProblem  # Assuming CityLayout is in aco.py
 
 
-def run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists, width, height):
+def run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists):
     results = []
 
     for alpha in alphas:
         for beta in betas:
             for elevation_list in elevation_lists:
+                # Calculate grid size, width, and height for each elevation list
                 grid_size = len(elevation_list)
-                problem = UrbanGardeningProblem(elevation_list, width,
-                                                height)  # Initialize UrbanGardeningProblem with elevations
+                width = height = int(np.sqrt(grid_size))  # Assuming elevation_list forms a square grid
+
+                # Check if calculated dimensions form a valid square grid
+                if width * height != grid_size:
+                    raise ValueError(f"Elevation list of size {grid_size} does not form a square grid.")
+
+                # Initialize UrbanGardeningProblem with elevations
+                problem = UrbanGardeningProblem(elevation_list, width, height)
                 aco = ACO_UrbanGardening(grid_size, num_ants, num_iterations, problem, evaporation_rate, alpha, beta,
                                          elevation_list, width, height)
                 best_solution, best_fitness, _, _, _, _, _, _ = aco.run()
@@ -68,10 +75,7 @@ if __name__ == "__main__":
         data = json.load(f)
         elevation_lists = data['elevation_lists']  # Make sure this matches your JSON structure
 
-    # Assuming all elevation lists have the same width and height
-    width = height = int(np.sqrt(len(elevation_lists[0])))
-
-    results = run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists, width, height)
+    results = run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists)
 
     # Save the results to a JSON file
     with open('results.json', 'w') as f:
