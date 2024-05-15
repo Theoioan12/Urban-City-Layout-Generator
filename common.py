@@ -6,13 +6,11 @@ from inspyred import ec, benchmarks
 from matplotlib import pyplot as plt
 
 # Static variables
-gridsize = 100
-height = 10
-width = 10
+
 
 import random
 # Generate 16 random values between 0 and 1000
-elevations_string = [random.randint(0, 1000) for _ in range(gridsize)]
+#elevations_string = [random.randint(0, 1000) for _ in range(gridsize)]
 #elevations_string = [948,924,1000,903,936,  935,  990,  939,   68   43   40   96   71  968
   #938   43   25   97   16   88  990  901   99   14   67   22    9  909
   #940   84    0   81   82   76  985  946   95   80    1   46   80  993
@@ -37,388 +35,226 @@ def generate_elevation_matrix(size, max_altitude):
     return elevation_matrix
 
 # Example usage
+"""
 size = width  # Size of the elevation matrix (square)
 max_altitude = 1500  # Maximum altitude in meters
 elevation_matrix = generate_elevation_matrix(size, max_altitude)
-
-elevations_string = elevation_matrix.flatten()
+"""
+"""elevations_string = elevation_matrix.flatten()
 print(elevations_string)
+"""
 #elevations_string = [850, 845, 830, 800, 750, 850, 845, 830, 800, 750, 850, 845, 830, 800, 750, 850, 845, 830, 800, 750, 850, 845, 830, 800, 750]
 
 
 # city layout to be used for generation
 class CityLayout(benchmarks.Benchmark):
   # init method
-  def _init_(self, elevations_string):
-        benchmarks.Benchmark._init_(self, len(elevations_string))
-        #self.init_layout = init_layout
-        self.elevations_string = elevations_string
-        self.bounder = ec.DiscreteBounder([0, 1])
-        self.maximize = True
-        self.best_all = None
-        self.best_feasible = None
+  def __init__(self, elevations_string, width, height):
+      benchmarks.Benchmark.__init__(self, len(elevations_string))
+      self.elevations_string = elevations_string
+      self.width = width
+      self.height = height
+      self.gridsize = width * height
+      self.bounder = ec.DiscreteBounder(['R', 'C', 'S', 'G'])
+      self.maximize = True
+      self.best_all = None
+      self.best_feasible = None
+
   def generator(self, random, args):
-        #print("calls generator")
-        """Return a candidate solution for an evolutionary algorithm.""" #TODO: adapt in order of our needs
-        chars = ['R', 'C', 'S', 'G']
-        # Generate a random array of 36 characters
-        layout = [random.choice(chars) for _ in range(gridsize)]
-        #print("it will return from generator" + str(layout) )
-        return layout
+      chars = ['R', 'C', 'S', 'G']
+      layout = [random.choice(chars) for _ in range(self.gridsize)]
+      return layout
 
   def evaluator(self, candidates, args):
-        #print("Calls evaluator")
+      fitness = []
+      for candidate in candidates:
+          fitness.append(self.calculate_fitness(candidate, self.elevations_string))
+      return fitness
 
-        """Return the fitness values for the given candidates."""
-        fitness = []
-        for candidate in candidates:
-            #print("candidate is: " + str(candidate))
-            fitness.append(CityLayout.calculate_fitness(candidate, self.elevations_string))
-        #print("it will return from evaluator" + str(fitness) )
-        #print("best fitness is: " + str(max(fitness)))
+  def calculate_fitness(self, layout, elev_grid):
+      fitness = 0
+      fitness += 10 * self.elev_weight_normal(layout, elev_grid)
+      fitness += 10 * self.commercial_weight(layout)
+      fitness += 10 * self.green_weight(layout)
+      fitness += 10 * self.res_weight(layout)
+      fitness += 10 * self.street_weight(layout)
+      fitness += 10 * self.res_clusters_weight(layout)
+      fitness += 10 * self.street_adjacency_weight(layout)
+      fitness += 10 * self.nearby_green_weight(layout)
+      fitness += 10 * self.street_connectivity_weight(layout)
+      return fitness
 
-        return fitness
-
-  def death_penalty_evaluator(self, candidates, args):
-        """Evaluate the fitness of the given candidates with a death penalty."""
-        fitness = []
-        for c in candidates:
-            #if CityLayout.street_adjacency_weight(c) < 1 or CityLayout.commercial_weight(c) < 1 or CityLayout.elev_weight_normal(c, self.elevations_string) < 1 or CityLayout.green_weight(c) < 1 or CityLayout.nearby_green_weight(c) < 1 or CityLayout.res_weight(c) < 1 or CityLayout.street_connectivity_weight(c) < 1:
-            if CityLayout.street_connectivity_weight(c) < 0.6:
-                fit = 0
-            else:
-                fit = CityLayout.calculate_fitness(c, self.elevations_string)
-            fitness.append(fit)
-        return fitness
-
-  def static_penalty_evaluator(self, candidates, args):
-        """Evaluate the fitness of the given candidates with a static penalty."""
-        Rg = args.get('Rg', 3)
-        Rh = args.get('Rh', 10)
-        fitness = []
-        for c in candidates:
-            fit = CityLayout.calculate_fitness(c, self.elevations_string) - Rg*max(0, CityLayout.res_weight(c)) - Rh*max(0, CityLayout.street_connectivity_weight(c))
-            fitness.append(fit)
-        return fitness
-
-  def dynamic_penalty_evaluator(self, candidates, args):
-        """Evaluate the fitness of the given candidates with a dynamic penalty."""
-        C = args.get('p_c', 5)
-        alpha = args.get('p_alpha', 2)
-        beta = args.get('p_beta', 2)
-        t = args['_ec'].num_generations
-        fitness = []
-        for c in candidates:
-            viol = CityLayout.street_adjacency_weight(c) * beta + CityLayout.commercial_weight(c) * beta + CityLayout.elev_weight_normal(c, self.elevations_string) * beta + CityLayout.green_weight(c) *beta + CityLayout.nearby_green_weight(c) * beta + CityLayout.res_weight(c) * beta + CityLayout.street_connectivity_weight(c)*beta
-            fit = CityLayout.calculate_fitness(c, self.elevations_string) - (C*t)**alpha * viol
-            fitness.append(fit)
-        return fitness
-
-  def smith_adaptive_penalty_evaluator(self, candidates, args):
-        """Evaluate the fitness of the given candidates with a Smith's adaptive penalty."""
-        nft0 = args.get('NFT0', 0.01)
-        lmbd = args.get('lambda', 1)
-        beta = args.get('p_beta', 1)
-        t = args['_ec'].num_generations
-        nft = nft0 / (1 + lmbd*t)
-        viol = []
-        fit = []
-        for c in candidates:
-            v = 7 - CityLayout.street_adjacency_weight(c) + CityLayout.commercial_weight(c) + CityLayout.elev_weight_normal(c, self.elevations_string) + CityLayout.green_weight(c) + CityLayout.nearby_green_weight(c) + CityLayout.res_weight(c) + CityLayout.street_connectivity_weight(c)
-            viol.append(v)
-            fit.append(CityLayout.calculate_fitness(c, self.elevations_string))
-        max_fit = max(fit)
-        if self.best_all is None:
-            self.best_all = max_fit
-        elif max_fit > self.best_all:
-            self.best_all = max_fit
-        it = [f for f, v in zip(fit, viol) if v == 0]
-        if it:
-            max_feasible = max(it)
-        else:
-            max_feasible = 0
-        if self.best_feasible is None:
-            self.best_feasible = max_feasible
-        elif max_feasible > self.best_feasible:
-            self.best_feasible = max_feasible
-        fitness = []
-        for f, v in zip(fit, viol):
-            fitness.append(f + (self.best_feasible - self.best_all) * v)
-        return fitness
-
-  def find_groups(grid): #searches for groups of R and C
-    def dfs(i, j, group):
-      if 0 <= i < height and 0 <= j < width and visited[i][j] == False and grid_matrix[i][j] in ['R']:
-        visited[i][j] = True
-        #print(str(i) + str(j) + ":" + str(grid_matrix[i][j]) + " was marked visited")
-        group.append((i, j))
-        for di, dj in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-          dfs(i + di, j + dj, group)
-      elif 0 <= i < height and 0 <= j < width and grid_matrix[i][j] == 'S':
-        group.append(True)
-
-
-    grid_matrix = [grid[i:i+width] for i in range(0, len(grid), width)]
-    visited = [[False] * width for _ in range(height)]
-    groups = []
-
-    for i in range(height):
-      for j in range(width):
-        if visited[i][j] == False and grid_matrix[i][j] in ['R']:
-          group = []
-          dfs(i, j, group)
-          if group:
-            groups.append(group)
-
-    return groups
-
-  def find_streets_connected(grid): #searches for groups of R and C
-    def dfs(i, j, group):
-      if 0 <= i < height and 0 <= j < width and visited[i][j] == False and grid_matrix[i][j] in ['S']:
-        visited[i][j] = True
-        #print(str(i) + str(j) + ":" + str(grid_matrix[i][j]) + " was marked visited")
-        group.append((i, j))
-        for di, dj in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
-          dfs(i + di, j + dj, group)
-
-
-    grid_matrix = [grid[i:i+width] for i in range(0, len(grid), width)]
-    visited = [[False] * width for _ in range(height)]
-    groups = []
-
-    for i in range(height):
-      for j in range(width):
-        if visited[i][j] == False and grid_matrix[i][j] in ['S']:
-          group = []
-          dfs(i, j, group)
-          if group:
-            groups.append(group)
-
-    return groups
-
-
-  def has_nearby_green(matrix, row, col, max_distance=3):
-    rows = len(matrix)
-    cols = len(matrix[0])
-
-    for i in range(max(row - max_distance, 0), min(row + max_distance + 1, rows)):
-        for j in range(max(col - max_distance, 0), min(col + max_distance + 1, cols)):
-            if matrix[i][j] == 'G':
-                return True
-
-    return False
-
-  def search_for_nearby_green(matrix):
-    counter = 0; #counts how many Rs have green space
-    rows = len(matrix)
-    cols = len(matrix[0])
-
-    for i in range(rows):
-        for j in range(cols):
-            if matrix[i][j] == 'R':
-                if CityLayout.has_nearby_green(matrix, i, j, 3):
-                    #print(f"Found nearby green for 'R' at ({i}, {j})")
-                    counter = counter + 1
-                #else:
-                    #print(f"No nearby green for 'R' at ({i}, {j})")
-
-    return counter
-
-
-  def commercial_weight(layout): #Cs should be between 10% and 20%
-      layout_matrix = [layout[i:i+width] for i in range(0, gridsize, width)]
-      commercial_count = 0
-      for i in range(height):
-          for j in range(width):
-            # Current tile
-            tile = layout_matrix[i][j]
-            if tile == 'C':
-              commercial_count = commercial_count + 1
-      commercial_weight = 1;
-      if commercial_count < width * height * 0.1:
-        commercial_weight = (commercial_count / gridsize) * 5 + 0.5
-      elif commercial_count > width * height * 0.2:
-        commercial_weight = (commercial_count / gridsize) * (-0.625) + 1.125
+  def commercial_weight(self, layout):  # Cs should be between 10% and 20%
+      layout_matrix = [layout[i:i + self.width] for i in range(0, self.gridsize, self.width)]
+      commercial_count = sum(1 for row in layout_matrix for tile in row if tile == 'C')
+      commercial_weight = 1
+      if commercial_count < self.width * self.height * 0.1:
+          commercial_weight = (commercial_count / self.gridsize) * 5 + 0.5
+      elif commercial_count > self.width * self.height * 0.2:
+          commercial_weight = (commercial_count / self.gridsize) * (-0.625) + 1.125
       return commercial_weight
 
-  def green_weight(layout): #green tiles should be between 15% and 25%
-      layout_matrix = [layout[i:i+width] for i in range(0, gridsize, width)]
-      green_count = 0
-      for i in range(height):
-          for j in range(width):
-            # Current tile
-            tile = layout_matrix[i][j]
-            if tile == 'G':
-              green_count = green_count + 1
-      green_weight = 1;
-      if green_count < width * height * 0.15:
-        green_weight = (green_count / gridsize) * 3.33 + 0.5
-      elif green_count > width * height * 0.25:
-        green_weight = (green_count / gridsize) * (-0.66) + 1.16
-
+  def green_weight(self, layout):  # Green tiles should be between 15% and 25%
+      layout_matrix = [layout[i:i + self.width] for i in range(0, self.gridsize, self.width)]
+      green_count = sum(1 for row in layout_matrix for tile in row if tile == 'G')
+      green_weight = 1
+      if green_count < self.width * self.height * 0.15:
+          green_weight = (green_count / self.gridsize) * 3.33 + 0.5
+      elif green_count > self.width * self.height * 0.25:
+          green_weight = (green_count / self.gridsize) * (-0.66) + 1.16
       return green_weight
 
-  def street_weight(layout): #street tiles should be between 20% and 30%
-      layout_matrix = [layout[i:i+width] for i in range(0, gridsize, width)]
-      street_count = 0
-      for i in range(height):
-          for j in range(width):
-            # Current tile
-            tile = layout_matrix[i][j]
-            if tile == 'S':
-              street_count = street_count + 1
-      street_weight = 1;
-      if street_count < width * height * 0.2:
-        street_weight = (street_count / gridsize) * 2.5 + 0.5
-      elif street_count > width * height * 0.3:
-        street_weight = (street_count / gridsize) * (-0.714) + 1.214
-
+  def street_weight(self, layout):  # Street tiles should be between 20% and 30%
+      layout_matrix = [layout[i:i + self.width] for i in range(0, self.gridsize, self.width)]
+      street_count = sum(1 for row in layout_matrix for tile in row if tile == 'S')
+      street_weight = 1
+      if street_count < self.width * self.height * 0.2:
+          street_weight = (street_count / self.gridsize) * 2.5 + 0.5
+      elif street_count > self.width * self.height * 0.3:
+          street_weight = (street_count / self.gridsize) * (-0.714) + 1.214
       return street_weight
 
-  def res_weight(layout): #R tiles should be between 25% and 40%
-      layout_matrix = [layout[i:i+width] for i in range(0, gridsize, width)]
-      res_count = 0
-      for i in range(height):
-          for j in range(width):
-            # Current tile
-            tile = layout_matrix[i][j]
-            if tile == 'R':
-              res_count = res_count + 1
-      res_weight = 1;
-      if res_count < width * height * 0.2:
-        res_weight = (res_count / gridsize) * 2.5 + 0.5
-      elif res_count > width * height * 0.3:
-        green_weight = (res_count / gridsize) * (-0.714) + 1.214
-
+  def res_weight(self, layout):  # R tiles should be between 20% and 30%
+      layout_matrix = [layout[i:i + self.width] for i in range(0, self.gridsize, self.width)]
+      res_count = sum(1 for row in layout_matrix for tile in row if tile == 'R')
+      res_weight = 1
+      if res_count < self.width * self.height * 0.2:
+          res_weight = (res_count / self.gridsize) * 2.5 + 0.5
+      elif res_count > self.width * self.height * 0.3:
+          res_weight = (res_count / self.gridsize) * (-0.714) + 1.214
       return res_weight
 
-  def res_clusters_weight(layout):
-      r_count = 0
-      for i in layout:
-        if i == 'R':
-          r_count += 1
+  def res_clusters_weight(self, layout):
+      r_count = layout.count('R')
       res_weight = 1
-      groups = CityLayout.find_groups(layout)
-
-      groups_ok = 0
-      sum = 0
-      for i, group in enumerate(groups, 1):
-        filtered_list = [item for item in group if item != True]
-        num_elements = len(filtered_list)
-
-        if num_elements >= 2 and num_elements <= 10:
-          groups_ok += 1
+      groups = self.find_groups(layout)
+      groups_ok = sum(1 for group in groups if 2 <= len([item for item in group if item != True]) <= 10)
 
       if groups_ok > len(groups) / 2:
-        res_weight *= groups_ok / len(groups)
+          res_weight *= groups_ok / len(groups)
       else:
-        res_weight = 0.5
+          res_weight = 0.5
 
       return res_weight
 
-  def street_adjacency_weight(layout):
-      groups = CityLayout.find_groups(layout)
-      street_adj_weight = 1
-      count = 0
-      for group in groups:
-        if True in group:
-          count += 1
-      #count = sum(True in group for group in groups)
-      if len(groups) != 0:
-       percentage = count / len(groups)
-      else:
-        percentage = 0
-      #print("perceny is now: " + str(percentage))
+  def street_adjacency_weight(self, layout):
+      groups = self.find_groups(layout)
+      count = sum(True in group for group in groups)
+      percentage = count / len(groups) if groups else 0
       street_adj_weight = 0.5 * percentage + 0.5
-
       return street_adj_weight
 
-  def nearby_green_weight(layout):
-      layout_matrix = [layout[i:i+width] for i in range(0, gridsize, width)]
-      counter = CityLayout.search_for_nearby_green(layout_matrix)
-      r_count = 0
-      for row in layout_matrix:
-        for tile in row:
-            if tile == 'R':
-                r_count += 1
-      if r_count != 0:
-        nearby_green_weight = counter / r_count
-      else:
-        nearby_green_weight = 0.5
-
+  def nearby_green_weight(self, layout):
+      layout_matrix = [layout[i:i + self.width] for i in range(0, self.gridsize, self.width)]
+      counter = self.search_for_nearby_green(layout_matrix)
+      r_count = sum(1 for row in layout_matrix for tile in row if tile == 'R')
+      nearby_green_weight = counter / r_count if r_count else 0.5
       return nearby_green_weight
 
-  def street_connectivity_weight(layout):
-      groups = CityLayout.find_streets_connected(layout)
-      street_connectivity = 0
-      for g in groups:
-        if len(g) != 0:
-          street_connectivity += 1/(len(g)**2)
+  def street_connectivity_weight(self, layout):
+      groups = self.find_streets_connected(layout)
+      street_connectivity = sum(1 / (len(g) ** 2) for g in groups if len(g) != 0)
 
-      s_count = 0
-      for i in layout:
-        if i == 'S':
-          s_count += 1
-
+      s_count = layout.count('S')
       if s_count != 1:
-        return street_connectivity*(s_count*2)/(1-s_count * 3) - s_count * 3/(1-s_count*3)
+          return street_connectivity * (s_count * 2) / (1 - s_count * 3) - s_count * 3 / (1 - s_count * 3)
       else:
-        return 0.5
+          return 0.5
 
-  def elev_weight_normal(layout, elev_grid):
-      elevations_matrix = [elev_grid[i:i+width] for i in range(0, len(layout), width)]
-      layout_matrix = [layout[i:i+width] for i in range(0, len(layout), width)]
-      highest_point = 0
-      lowest_point = 1500
+  def elev_weight_normal(self, layout, elev_grid):
+      elevations_matrix = [elev_grid[i:i + self.width] for i in range(0, len(layout), self.width)]
+      layout_matrix = [layout[i:i + self.width] for i in range(0, len(layout), self.width)]
+      highest_point = max(max(row) for row in elevations_matrix)
+      lowest_point = min(min(row) for row in elevations_matrix)
 
-      for row in elevations_matrix:
-        for value in row:
-          if value > highest_point:
-            highest_point = value
-          elif value < lowest_point:
-            lowest_point = value
       elev_weight = 1
+      for i in range(self.width):
+          for j in range(self.height):
+              tile = layout_matrix[i][j]
+              elevation = elevations_matrix[i][j]
+              if tile == 'R' and elevation > (highest_point - lowest_point) / 3:
+                  elev_weight += elevation * (1.5 / ((-2) * highest_point - lowest_point)) + 0.5 + highest_point * (
+                              1.5 / (2 * highest_point + lowest_point))
+              elif tile == 'C' and elevation > (highest_point - lowest_point) / 5:
+                  elev_weight += elevation * (2.5 / ((-4) * highest_point - lowest_point)) + 0.5 + highest_point * (
+                              2.5 / (4 * highest_point + lowest_point))
+              elif tile == 'G' and elevation > (highest_point - lowest_point) / 3:
+                  elev_weight += elevation * (1.5 / (2 * highest_point + lowest_point)) + 1 - 0.5 * (
+                              highest_point - lowest_point) / (2 * highest_point + lowest_point)
+              else:
+                  elev_weight += 1
 
-      for i in range(width):
-        for j in range(height):
-            tyle = layout_matrix[i][j]
-            if tyle == 'R' and elevations_matrix[i][j] > (highest_point - lowest_point) / 3: #642
-              elev_weight += elevations_matrix[i][j] * (1.5 / ((-2) * highest_point - lowest_point)) + 0.5 + highest_point * (1.5 / (2 * highest_point + lowest_point))
-            elif tyle == 'C' and elevations_matrix[i][j] > (highest_point - lowest_point) / 5: #385
-              elev_weight += elevations_matrix[i][j] * (2.5 / ((-4) * highest_point - lowest_point)) + 0.5 + highest_point * (2.5 / (4 * highest_point + lowest_point))
-            elif tyle == 'G' and elevations_matrix[i][j] > (highest_point - lowest_point) / 3: #642
-              elev_weight += elevations_matrix[i][j] * (1.5 / (2 * highest_point + lowest_point)) + 1 - 0.5 * (highest_point - lowest_point) / (2 * highest_point + lowest_point)
-            else:
-              elev_weight += 1
-      return elev_weight/gridsize
+      return elev_weight / self.gridsize
 
-  def calculate_fitness(layout, elev_grid):
-      # Transform the linear string into a 2D array
-      layout_matrix = [layout[i:i+width] for i in range(0, gridsize, width)]
-      elevations_matrix = [elev_grid[i:i+width] for i in range(0, len(elev_grid), width)]
-      fitness = 0
+  def find_groups(self, grid):
+      def dfs(i, j, group):
+          if 0 <= i < self.height and 0 <= j < self.width and visited[i][j] == False and grid_matrix[i][j] in ['R']:
+              visited[i][j] = True
+              group.append((i, j))
+              for di, dj in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                  dfs(i + di, j + dj, group)
+          elif 0 <= i < self.height and 0 <= j < self.width and grid_matrix[i][j] == 'S':
+              group.append(True)
 
-      fitness = fitness + 10 * CityLayout.elev_weight_normal(layout, elev_grid)
+      grid_matrix = [grid[i:i + self.width] for i in range(0, len(grid), self.width)]
+      visited = [[False] * self.width for _ in range(self.height)]
+      groups = []
 
-      fitness = fitness + 10 * CityLayout.commercial_weight(layout)
+      for i in range(self.height):
+          for j in range(self.width):
+              if visited[i][j] == False and grid_matrix[i][j] in ['R']:
+                  group = []
+                  dfs(i, j, group)
+                  if group:
+                      groups.append(group)
 
-      fitness = fitness + 10 * CityLayout.green_weight(layout)
+      return groups
 
-      fitness = fitness + 10 * CityLayout.res_weight(layout)
+  def find_streets_connected(self, grid):
+      def dfs(i, j, group):
+          if 0 <= i < self.height and 0 <= j < self.width and visited[i][j] == False and grid_matrix[i][j] in ['S']:
+              visited[i][j] = True
+              group.append((i, j))
+              for di, dj in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+                  dfs(i + di, j + dj, group)
 
-      fitness = fitness + 10 * CityLayout.street_weight(layout)
+      grid_matrix = [grid[i:i + self.width] for i in range(0, len(grid), self.width)]
+      visited = [[False] * self.width for _ in range(self.height)]
+      groups = []
 
-      fitness = fitness + 10 * CityLayout.res_clusters_weight(layout)
+      for i in range(self.height):
+          for j in range(self.width):
+              if visited[i][j] == False and grid_matrix[i][j] in ['S']:
+                  group = []
+                  dfs(i, j, group)
+                  if group:
+                      groups.append(group)
 
-      fitness = fitness + 10 * CityLayout.street_adjacency_weight(layout)
+      return groups
 
-      #verify if there is green space at a distance of maximum 3 tiles from R tiles
-      fitness = fitness + 10 * CityLayout.nearby_green_weight(layout)
+  def has_nearby_green(self, matrix, row, col, max_distance=3):
+      rows = len(matrix)
+      cols = len(matrix[0])
 
-      #print(f"The weight for street connectivity is {street_connectivity_weight}")
-      fitness = fitness + 10 * CityLayout.street_connectivity_weight(layout)
+      for i in range(max(row - max_distance, 0), min(row + max_distance + 1, rows)):
+          for j in range(max(col - max_distance, 0), min(col + max_distance + 1, cols)):
+              if matrix[i][j] == 'G':
+                  return True
 
-      return fitness
+      return False
+
+  def search_for_nearby_green(self, matrix):
+      counter = 0
+      rows = len(matrix)
+      cols = len(matrix[0])
+
+      for i in range(rows):
+          for j in range(cols):
+              if matrix[i][j] == 'R':
+                  if self.has_nearby_green(matrix, i, j, 3):
+                      counter += 1
+
+      return counter
 
 
 def distance(x, y):
@@ -433,16 +269,19 @@ def distance(x, y):
 
 # Subclass to be used by the ACO class
 class UrbanGardeningProblem:
-    def __init__(self, elevations):
+    def __init__(self, elevations, width, height):
         self.elevations = elevations
+        self.width = width
+        self.height = height
 
     def evaluate(self, solution):
         # Evaluates the urban layout solution using the fitness function from CityLayout
-        return CityLayout.calculate_fitness(solution, self.elevations)
+        city_layout = CityLayout(self.elevations, self.width, self.height)
+        return city_layout.calculate_fitness(solution, self.elevations)
 
 # The class for testing
 class ACO_UrbanGardening:
-    def __init__(self, grid_size, num_ants, num_iterations, problem, evaporation_rate, alpha, beta, elevations_string):
+    def __init__(self, grid_size, num_ants, num_iterations, problem, evaporation_rate, alpha, beta, elevations_string, width, height):
         self.grid_size = grid_size # Grid dimension
         self.num_ants = num_ants # The number of ants
         self.num_iterations = num_iterations # Total iterations
@@ -453,6 +292,8 @@ class ACO_UrbanGardening:
         self.beta = beta    # Heuristic influence
         self.tile_types = ['R', 'C', 'S', 'G']  # Residential, Commercial, Streets, Green spaces
         self.elevations_string = elevations_string
+        self.width = width
+        self.height = height
 
         # History tracking
         self.history = []
@@ -466,6 +307,7 @@ class ACO_UrbanGardening:
         self.elev_weight_overall_history = []
         self.best_fitness_historic = []
         self.diversity_historic = []
+        self.city_layout = CityLayout(self.elevations_string, self.width, self.height)
 
 
     # Display the solution as a matrix
@@ -474,13 +316,13 @@ class ACO_UrbanGardening:
         color_array = [color_map[tile] for tile in solution]
 
         fig, ax = plt.subplots(figsize=(10, 10))
-        for i in range(width):
-            for j in range(height):
-                index = i * width + j
+        for i in range(self.width):
+            for j in range(self.height):
+                index = i * self.width + j
                 ax.add_patch(plt.Rectangle((j, i), 1, 1, color=color_array[index]))
 
-        ax.set_xlim(0, width)
-        ax.set_ylim(0, height)
+        ax.set_xlim(0, self.width)
+        ax.set_ylim(0, self.height)
         ax.invert_yaxis()
         ax.axis('off')
         plt.show()
@@ -518,14 +360,14 @@ class ACO_UrbanGardening:
         best_index = np.argmax(fitnesses)
         best_solution = solutions[best_index]
 
-        self.solution_history_fitness.append(CityLayout.calculate_fitness(best_solution, self.problem.elevations))
-        self.commercial_weight_history.append(CityLayout.commercial_weight(best_solution))
-        self.green_weight_history.append(CityLayout.green_weight(best_solution))
-        self.res_weight_history.append(CityLayout.res_weight(best_solution))
-        self.street_adjacency_history.append(CityLayout.street_adjacency_weight(best_solution))
-        self.nearby_green_weight_history.append(CityLayout.nearby_green_weight(best_solution))
-        self.street_connectivity_history.append(CityLayout.street_connectivity_weight(best_solution))
-        self.elev_weight_overall_history.append(CityLayout.elev_weight_normal(best_solution, self.problem.elevations))
+        self.solution_history_fitness.append(self.city_layout.calculate_fitness(best_solution, self.problem.elevations))
+        self.commercial_weight_history.append(self.city_layout.commercial_weight(best_solution))
+        self.green_weight_history.append(self.city_layout.green_weight(best_solution))
+        self.res_weight_history.append(self.city_layout.res_weight(best_solution))
+        self.street_adjacency_history.append(self.city_layout.street_adjacency_weight(best_solution))
+        self.nearby_green_weight_history.append(self.city_layout.nearby_green_weight(best_solution))
+        self.street_connectivity_history.append(self.city_layout.street_connectivity_weight(best_solution))
+        self.elev_weight_overall_history.append(self.city_layout.elev_weight_normal(best_solution, self.problem.elevations))
         self.best_fitness_historic.append(fitnesses[best_index])
         self.diversity_historic.append(self.calculate_diversity(solutions))
 
@@ -617,19 +459,19 @@ class ACO_UrbanGardening:
         if not solution:
             return np.array([1, 1, 1, 1])  # Return neutral heuristic values
 
-        grid_matrix = [solution[i:i + width] for i in range(0, len(solution), width)]
-        i, j = divmod(position, width)
+        grid_matrix = [solution[i:i + self.width] for i in range(0, len(solution), self.width)]
+        i, j = divmod(position, self.width)
 
         # Neighborhood analysis with boundary checks
         directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # N, S, W, E
         neighbors = [
             (i + di, j + dj)
             for di, dj in directions
-            if 0 <= i + di < height and 0 <= j + dj < width
+            if 0 <= i + di < self.height and 0 <= j + dj < self.width
         ]
 
         # Filter neighbors that are within the bounds of the solution matrix
-        valid_neighbors = [(ni, nj) for ni, nj in neighbors if 0 <= ni < height and 0 <= nj < width]
+        valid_neighbors = [(ni, nj) for ni, nj in neighbors if 0 <= ni < self.height and 0 <= nj < self.width]
 
         # Access neighboring tiles only if they exist in the solution matrix
         neighbor_tiles = []
@@ -689,12 +531,14 @@ class ACO_UrbanGardening:
 
 # Example usage
 grid_size = 100
+height = 10
+width = 10
 num_ants = 10
 num_iterations = 15
 elevations = [random.randint(0, 1000) for _ in range(grid_size)]
-problem = UrbanGardeningProblem(elevations)
+problem = UrbanGardeningProblem(elevations, width, height)
 
-aco = ACO_UrbanGardening(grid_size, num_ants, num_iterations, problem, 0.1, 1, 1, elevations)
+aco = ACO_UrbanGardening(grid_size, num_ants, num_iterations, problem, 0.1, 1, 1, elevations, width, height)
 best_solution, best_fitness, commercial_weight_history, green_weight_history, res_weight_history, street_adjacency_history, street_connectivity_history, elev_weight_overall_history = aco.run()
 
 print("Best Fitness:", best_fitness)
