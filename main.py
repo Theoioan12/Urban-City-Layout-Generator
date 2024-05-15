@@ -3,10 +3,12 @@
  Preslav Shterev
  UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
 """
+import json
+
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from common import ACO_UrbanGardening, UrbanGardeningProblem  # Assuming CityLayout is in common.py
+from aco import ACO_UrbanGardening, UrbanGardeningProblem  # Assuming CityLayout is in aco.py
 
 def run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists):
     results = []
@@ -32,6 +34,7 @@ def run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, el
 
     return results
 
+
 def plot_results(results):
     alphas = sorted(set(result['alpha'] for result in results))
     betas = sorted(set(result['beta'] for result in results))
@@ -50,6 +53,12 @@ def plot_results(results):
             ax.set_ylabel('Best Fitness')
     plt.tight_layout()
     plt.show()
+
+
+def save_results_to_file(results, filename):
+    with open(filename, 'w') as file:
+        json.dump(results, file, indent=4)
+
 
 if __name__ == "__main__":
     num_ants = 10
@@ -105,4 +114,5 @@ if __name__ == "__main__":
     ]
 
     results = run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists)
-    plot_results(results)
+    #plot_results(results)
+    save_results_to_file(results, "results.json")
