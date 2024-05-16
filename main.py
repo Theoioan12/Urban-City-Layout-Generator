@@ -96,8 +96,8 @@ def plot_results(results):
 
 if __name__ == "__main__":
     # Parameters
-    num_ants = 10
-    num_iterations = 15
+    num_ants = 50
+    num_iterations = 40
 
     """
      Evaporation rate to be tested
@@ -129,7 +129,8 @@ if __name__ == "__main__":
     results = run_experiment(num_ants, num_iterations, evaporation_rate, alphas, betas, elevation_lists)
 
     # Save the results to a JSON file
-    with open('results.json', 'w') as f:
-        json.dump(results, f, indent=4)
-
+    """
+        with open('results.json', 'w') as f:
+            json.dump(results, f, indent=4)
+        """
     #plot_results(results)

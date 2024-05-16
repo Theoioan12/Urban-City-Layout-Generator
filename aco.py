@@ -2,9 +2,10 @@
  Buliga Theodor Ioan
  UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
 """
-# Imports for all of the code
+# Imports for all the code
 from inspyred import ec, benchmarks
 import random
+import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from fitness import CityLayout
@@ -43,6 +44,7 @@ class ACO_UrbanGardening:
         # History tracking
         self.history = []
         self.solution_history_fitness = []
+
         self.commercial_weight_history = []
         self.green_weight_history = []
         self.res_weight_history = []
@@ -50,9 +52,13 @@ class ACO_UrbanGardening:
         self.nearby_green_weight_history = []
         self.street_connectivity_history = []
         self.elev_weight_overall_history = []
+        self.street_weight_overall_history = []
+        self.res_cluster_weight_history = []
+
         self.best_fitness_historic = []
         self.diversity_historic = []
         self.city_layout = CityLayout(self.elevations_string, self.width, self.height)
+        self.trails_history = []
 
 
     # Display the solution as a matrix
@@ -76,11 +82,14 @@ class ACO_UrbanGardening:
     def run(self):
         best_solution = None # No solution yet
         best_fitness = -np.inf # No fitness yet
+        self.trails_history = []  # List to store fitness of each ant per iteration
 
         # Start of the algorithm
         for iteration in range(self.num_iterations):
             solutions = [self.generate_solution() for _ in range(self.num_ants)]
             fitnesses = [self.problem.evaluate(solution) for solution in solutions]
+
+            self.trails_history.append([(solution, fitness) for solution, fitness in zip(solutions, fitnesses)])
 
             self.record_history(solutions, fitnesses)  # Record the evolution history
             # Update pheromones globally
@@ -93,6 +102,9 @@ class ACO_UrbanGardening:
                 best_solution = solutions[current_best_index]
 
         self.visualize_solution(best_solution)
+        self.visualize_fitness_history()
+        self.visualize_diversity()
+        self.visualize_parameter_evolution()
         return (best_solution, best_fitness, self.commercial_weight_history,
                 self.green_weight_history, self.res_weight_history, self.street_adjacency_history,
                 self.street_connectivity_history,
@@ -113,6 +125,9 @@ class ACO_UrbanGardening:
         self.nearby_green_weight_history.append(self.city_layout.nearby_green_weight(best_solution))
         self.street_connectivity_history.append(self.city_layout.street_connectivity_weight(best_solution))
         self.elev_weight_overall_history.append(self.city_layout.elev_weight_normal(best_solution, self.problem.elevations))
+        self.street_weight_overall_history.append(self.city_layout.street_weight(best_solution))
+        self.res_cluster_weight_history.append(self.city_layout.res_clusters_weight(best_solution))
+
         self.best_fitness_historic.append(fitnesses[best_index])
         self.diversity_historic.append(self.calculate_diversity(solutions))
 
@@ -238,6 +253,10 @@ class ACO_UrbanGardening:
         H_nearby_green = 1 if any(t == 'G' for t in neighbor_tiles) else 0
         H_street_connectivity = 1 if 'S' in neighbor_tiles else 0
 
+        # Increase weight for street connectivity
+        if H_street_connectivity > 0:
+            H_street_connectivity = 2  # Boost the heuristic value if there are adjacent streets
+
         highest_point = max(self.elevations_string)
         lowest_point = min(self.elevations_string)
         elevation_threshold_R = (highest_point - lowest_point) / 3
@@ -273,3 +292,53 @@ class ACO_UrbanGardening:
             for idx, tile in enumerate(solution):
                 tile_index = self.tile_types.index(tile)
                 self.pheromones[idx, tile_index] += fitness
+
+    def visualize_fitness_history(self):
+        sns.set_style('darkgrid')
+        fitness = np.array([[ant[1] for ant in trails] for trails in self.trails_history])
+        best_fitness = np.array(self.solution_history_fitness)
+
+        fig, axs = plt.subplots(figsize=(10, 5))
+        axs.set_title('Fitness Evolution')
+        axs.set_xlabel('Iterations')
+        axs.set_ylabel('Fitness')
+
+        median = np.median(fitness, axis=1)
+        min_val = np.min(fitness, axis=1)
+        max_val = np.max(fitness, axis=1)
+
+        axs.plot(best_fitness, label='Best Fitness', color='blue')
+        axs.plot(median, label='Median Fitness', color='orange')
+        axs.fill_between(np.arange(len(median)), min_val, max_val, alpha=0.3, color='orange')
+
+        plt.legend()
+        plt.show()
+
+    def visualize_diversity(self):
+        sns.set_style('darkgrid')
+        fig, axs = plt.subplots(figsize=(10, 5))
+        axs.set_title('Diversity Evolution')
+        axs.set_xlabel('Iterations')
+        axs.set_ylabel('Diversity')
+
+        axs.plot(self.diversity_historic, color='orange')
+
+        plt.show()
+
+    def visualize_parameter_evolution(self):
+        plt.figure(figsize=(10, 10))
+        plt.plot(self.commercial_weight_history, label='Commercial Weight')
+        plt.plot(self.green_weight_history, label='Green Weight')
+        plt.plot(self.res_weight_history, label='Residential Weight')
+        plt.plot(self.street_adjacency_history, label='Street Adjacency')
+        plt.plot(self.nearby_green_weight_history, label='Nearby Green')
+        plt.plot(self.street_connectivity_history, label='Street Connectivity')
+        plt.plot(self.elev_weight_overall_history, label='Elevations Overall')
+        plt.plot(self.res_cluster_weight_history, label='Cluster Weight')
+        plt.plot(self.street_weight_overall_history, label='Street Weight')
+
+        plt.xlabel('Generation')
+        plt.ylabel('Weight Value')
+        plt.title('Parameter Evolution Over Generations')
+        plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=2)
+        plt.show()
