@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 """
  Modified the code from the generational
  since I opted for an automatic testing.
+ 
+ !No algorithmical changes, only implementing 
+ details so we can facilitate the testing!
 """
 def generate_elevation_matrix(size, max_altitude):
     elevation_matrix = np.zeros((size, size))

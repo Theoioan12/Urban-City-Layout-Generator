@@ -105,7 +105,7 @@ if __name__ == "__main__":
         higher -> exploration
         lower -> exploitation
     """
-    evaporation_rate = 0.5
+    evaporation_rate = 0.9
 
     """
      alphas to be tested
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         alpha = 0 : random greedy search
         alpha < 0 : more exploration
     """
-    alphas = [-0.5, 0, 0.5]
+    alphas = [0]
 
     """
      Heuristic influence
