@@ -9,6 +9,7 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from fitness import CityLayout
+import time
 
 """
  ACO implementation
@@ -80,6 +81,7 @@ class ACO_UrbanGardening:
 
     # Apply the algorithm
     def run(self):
+        start_time = time.time()  # Capture the start time
         best_solution = None # No solution yet
         best_fitness = -np.inf # No fitness yet
         self.trails_history = []  # List to store fitness of each ant per iteration
@@ -101,14 +103,18 @@ class ACO_UrbanGardening:
                 best_fitness = fitnesses[current_best_index]
                 best_solution = solutions[current_best_index]
 
+        end_time = time.time()  # Capture the end time
+        execution_time = end_time - start_time  # Calculate the execution time
+
         self.visualize_solution(best_solution)
         self.visualize_fitness_history()
         self.visualize_diversity()
-        self.visualize_parameter_evolution()
+        self.visualize_parameter_evolution(execution_time)
+
         return (best_solution, best_fitness, self.commercial_weight_history,
                 self.green_weight_history, self.res_weight_history, self.street_adjacency_history,
                 self.street_connectivity_history,
-                self.elev_weight_overall_history)
+                self.elev_weight_overall_history, execution_time)
 
 
     # Keep track of the history for comparison
@@ -325,8 +331,8 @@ class ACO_UrbanGardening:
 
         plt.show()
 
-    def visualize_parameter_evolution(self):
-        plt.figure(figsize=(10, 10))
+    def visualize_parameter_evolution(self, execution_time):
+        plt.figure(figsize=(20, 20))
         plt.plot(self.commercial_weight_history, label='Commercial Weight')
         plt.plot(self.green_weight_history, label='Green Weight')
         plt.plot(self.res_weight_history, label='Residential Weight')
@@ -340,5 +346,14 @@ class ACO_UrbanGardening:
         plt.xlabel('Generation')
         plt.ylabel('Weight Value')
         plt.title('Parameter Evolution Over Generations')
+
+        # Annotations for parameters
+        param_text = (f"Alpha: {self.alpha}\nBeta: {self.beta}\n"
+                      f"Num Ants: {self.num_ants}\n"
+                      f"Execution Time: {execution_time:.2f} seconds")
+        plt.annotate(param_text, xy=(0.01, 0.99), xycoords='axes fraction',
+                     textcoords='axes fraction', va='top', ha='left', fontsize=9,
+                     bbox=dict(boxstyle="round,pad=0.3", edgecolor='gray', facecolor='white', alpha=0.5))
+
         plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), shadow=True, ncol=2)
         plt.show()
