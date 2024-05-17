@@ -2,7 +2,7 @@
  Imported code but modified by Buliga Theodor Ioan
  UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
 """
-# Imports for all the code
+
 from inspyred import ec, benchmarks
 import random
 import numpy as np

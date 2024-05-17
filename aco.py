@@ -2,7 +2,7 @@
  Buliga Theodor Ioan
  UPM ETSISI - Bioinspired Algorithms for Optimization 2023-2024
 """
-# Imports for all the code
+
 from inspyred import ec, benchmarks
 import random
 import seaborn as sns
@@ -105,12 +105,12 @@ class ACO_UrbanGardening:
 
         end_time = time.time()  # Capture the end time
         execution_time = end_time - start_time  # Calculate the execution time
-
+        """
         self.visualize_solution(best_solution)
         self.visualize_fitness_history()
         self.visualize_diversity()
         self.visualize_parameter_evolution(execution_time)
-
+        """
         return (best_solution, best_fitness, self.commercial_weight_history,
                 self.green_weight_history, self.res_weight_history, self.street_adjacency_history,
                 self.street_connectivity_history,
@@ -350,6 +350,7 @@ class ACO_UrbanGardening:
         # Annotations for parameters
         param_text = (f"Alpha: {self.alpha}\nBeta: {self.beta}\n"
                       f"Num Ants: {self.num_ants}\n"
+                      f"Evaporation Rate: {self.evaporation_rate}\n"
                       f"Execution Time: {execution_time:.2f} seconds")
         plt.annotate(param_text, xy=(0.01, 0.99), xycoords='axes fraction',
                      textcoords='axes fraction', va='top', ha='left', fontsize=9,
