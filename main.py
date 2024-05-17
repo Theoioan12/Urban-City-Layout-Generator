@@ -121,6 +121,43 @@ def plot_results(results):
     plt.show()
 
 
+def visualize_solution_and_config(config):
+    width = config['dimension']
+    height = config['dimension']  # Assuming square configuration for simplicity
+    solution = config['best_solution']
+
+    # Set up color mapping for different types of tiles
+    color_map = {'C': 'blue', 'R': 'brown', 'S': 'grey', 'G': 'green'}
+    color_array = [color_map[tile] for tile in solution]
+
+    # Create a plot for the solution matrix
+    fig, ax = plt.subplots(figsize=(10, 12))  # Increased height to make room for text
+    for i in range(height):
+        for j in range(width):
+            index = i * width + j
+            ax.add_patch(plt.Rectangle((j, i), 1, 1, color=color_array[index]))
+
+    # Set properties of the plot
+    ax.set_xlim(0, width)
+    ax.set_ylim(0, height)
+    ax.invert_yaxis()
+    ax.axis('off')
+
+    # Display configuration details below the matrix
+    config_text = (
+        f"Alpha: {config['alpha']}\n"
+        f"Beta: {config['beta']}\n"
+        f"Evaporation Rate: {config['evaporation_rate']}\n"
+        f"Number of Ants: {config['num_ants']}\n"
+        f"Best Fitness: {config['fitness']}\n"
+        f"Execution Time: {config['time']} seconds\n"
+        f"Grid Dimension: {width}x{height}"
+    )
+    plt.figtext(0.5, 0.02, config_text, ha="center", fontsize=12, bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
+
+    plt.show()
+
+
 if __name__ == "__main__":
     # Parameters
     num_ants = [10]
@@ -154,6 +191,9 @@ if __name__ == "__main__":
         elevation_lists = data['elevation_lists']  # Make sure this matches your JSON structure
 
     results = run_experiment(num_ants, num_iterations, evaporation_rates, alphas, betas, elevation_lists)
+    for i in range (len(elevation_lists)):
+        visualize_solution_and_config(results[i])
+
 
     # Save the results to a JSON file
     """
