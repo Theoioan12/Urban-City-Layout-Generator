@@ -203,7 +203,10 @@ class ACO_UrbanGardening:
 
         # Calculate scores using both pheromone and heuristic information
         scores = (np.array(pheromones) ** self.alpha) * (np.array(heuristic_values) ** self.beta)
-
+        if np.any(scores < 0) or np.sum(scores) <= 0:
+            #print(
+                #f"Debug: Negative or zero scores encountered. Scores: {scores}, alpha: {self.alpha}, beta: {self.beta}")
+            scores[scores < 0] = 0  # Set negative scores to zero
         # Normalize scores to get probabilities
         if scores.sum() > 0:
             probabilities = scores / scores.sum()
