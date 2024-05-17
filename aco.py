@@ -63,11 +63,11 @@ class ACO_UrbanGardening:
 
 
     # Display the solution as a matrix
-    def visualize_solution(self, solution):
+    def visualize_solution(self, solution, best_fitness):
         color_map = {'C': 'blue', 'R': 'brown', 'S': 'grey', 'G': 'green'}
         color_array = [color_map[tile] for tile in solution]
 
-        fig, ax = plt.subplots(figsize=(10, 10))
+        fig, ax = plt.subplots(figsize=(10, 12))
         for i in range(self.width):
             for j in range(self.height):
                 index = i * self.width + j
@@ -77,6 +77,17 @@ class ACO_UrbanGardening:
         ax.set_ylim(0, self.height)
         ax.invert_yaxis()
         ax.axis('off')
+        # Display configuration details below the matrix
+        config_text = (
+            f"Alpha: {self.alpha}\n"
+            f"Beta: {self.beta}\n"
+            f"Evaporation Rate: {self.evaporation_rate}\n"
+            f"Number of Ants: {self.num_ants}\n"
+            f"Best Fitness: {best_fitness}\n"
+            f"Grid Dimension: {self.width}x{self.height}"
+        )
+        plt.figtext(0.5, 0.02, config_text, ha="center", fontsize=12,
+                    bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
         plt.show()
 
     # Apply the algorithm
@@ -105,12 +116,15 @@ class ACO_UrbanGardening:
 
         end_time = time.time()  # Capture the end time
         execution_time = end_time - start_time  # Calculate the execution time
-        """
-        self.visualize_solution(best_solution)
+
+        self.visualize_solution(best_solution, best_fitness)
+
         self.visualize_fitness_history()
+
         self.visualize_diversity()
+
         self.visualize_parameter_evolution(execution_time)
-        """
+
         return (best_solution, best_fitness, self.commercial_weight_history,
                 self.green_weight_history, self.res_weight_history, self.street_adjacency_history,
                 self.street_connectivity_history,

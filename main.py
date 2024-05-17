@@ -160,8 +160,8 @@ def visualize_solution_and_config(config):
 
 if __name__ == "__main__":
     # Parameters
-    num_ants = [10, 40, 80]
-    num_iterations = 40
+    num_ants = [10]
+    num_iterations = 10
 
     """
      Evaporation rate to be tested
@@ -169,7 +169,7 @@ if __name__ == "__main__":
         higher -> exploration
         lower -> exploitation
     """
-    evaporation_rates = [0.1, 0.5, 0.9]
+    evaporation_rates = [0.9]
 
     """
      alphas to be tested
@@ -178,12 +178,12 @@ if __name__ == "__main__":
         alpha = 0 : random greedy search
         alpha < 0 : more exploration
     """
-    alphas = [-2, -1, 1, 2]
+    alphas = [-1]
 
     """
      Heuristic influence
     """
-    betas = [0, 1, 2]
+    betas = [1]
 
     # Read elevation lists from the input.json file
     with open('input.json', 'r') as f:
@@ -197,7 +197,7 @@ if __name__ == "__main__":
 
     # Save the results to a JSON file
     """
-        with open('results.json', 'w') as f:
-            json.dump(results, f, indent=4)
-        """
+    #with open('results.json', 'w') as f:
+        json.dump(results, f, indent=4)
+    """
     #plot_results(results)
